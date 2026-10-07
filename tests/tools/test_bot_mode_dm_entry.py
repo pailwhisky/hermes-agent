@@ -147,9 +147,16 @@ def test_reply_waiter_prints_the_reply_whatever_the_dependency_state(tmp_path, r
     reply_path = bot_relay.relay_root(root) / bot_relay.REPLIES_DIR / f"{envelope['id']}.json"
     reply_path.parent.mkdir(parents=True)
     reply_path.write_text(json.dumps({"reply": "pong"}), encoding="utf-8")
-    argv = shlex.split(bot_relay.waiter_command(root, envelope))
+    # The published command may be the launcher (``hermes --run-module …``), which always
+    # imports hermes_bootstrap. The waiter body is stdlib: run the same flags as a direct
+    # script under the bare interpreter so a missing dependency generation cannot hide that.
+    parts = shlex.split(bot_relay.waiter_command(root, envelope))
+    if parts[1:3] == ["--run-module", "tools.bot_mode_dm"]:
+        script_argv = [str(RUNNER), *parts[3:]]
+    else:
+        script_argv = parts[1:]
 
-    result = _run([*BARE, *argv[1:]], env)
+    result = _run([*BARE, *script_argv], env)
 
     assert result.returncode == 0, result
     assert result.stdout.splitlines() == ["Reply from @researcher on ssh-vps:", "pong"]

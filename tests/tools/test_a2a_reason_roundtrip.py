@@ -46,6 +46,14 @@ def test_write_reply_classifies_when_reason_omitted(home):
 
 def _run_waiter(home, envelope):
     cmd = bot_relay.waiter_command(home, envelope)
+    import shlex
+    import sys
+    from pathlib import Path
+    from tools import bot_mode_dm
+    parts = shlex.split(cmd)
+    if parts[1:3] == ["--run-module", "tools.bot_mode_dm"]:
+        # Isolated HERMES_HOME: the launcher exits before this stdlib waiter.
+        cmd = shlex.join([sys.executable, str(Path(bot_mode_dm.__file__).resolve()), *parts[3:]])
     from pm.shell import bash as resolve_bash
 
     bash = resolve_bash()
